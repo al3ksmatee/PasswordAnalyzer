@@ -22,7 +22,7 @@ A SHA-256 hash of "mypassword123" should be displayed.
 ## ✅ 2. Analyze a Single Password
 Run:
 
-python password_analyzer.py --password "StrongPass!@#"
+python password_analyzer.py --password 'StrongPass!@#'
 
 📌 Expected Output:
 Displays password length.
