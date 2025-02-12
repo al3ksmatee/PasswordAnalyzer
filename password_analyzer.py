@@ -2,6 +2,7 @@ import hashlib
 import math
 import requests
 import re
+import argparse
 
 def calculate_entropy(password):
     """Calculate the entropy of a given password."""
@@ -25,9 +26,35 @@ def check_pwned(password):
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
     response = requests.get(url)
     
-    if suffix in response.text:
-        return True  # Password has been leaked
-    return False
+    return suffix in response.text
+
+def save_report(password, length, entropy, pwned):
+    """Save the password analysis report to a file."""
+    with open("password_report.txt", "w") as f:
+        f.write("🔍 Password Security Report 🔍\n")
+        f.write(f"🔹 Password Length: {length}\n")
+        f.write(f"🔹 Entropy: {entropy} bits\n")
+
+        if length < 8:
+            f.write("⚠️ Weak: Password should be at least 8 characters long!\n")
+        elif length < 12:
+            f.write("🟡 Moderate: Consider using 12+ characters.\n")
+        else:
+            f.write("✅ Strong: Good length!\n")
+
+        if entropy < 40:
+            f.write("⚠️ Low Entropy: Password is predictable.\n")
+        elif entropy < 60:
+            f.write("🟡 Medium Entropy: Could be improved.\n")
+        else:
+            f.write("✅ High Entropy: Strong password.\n")
+
+        if pwned:
+            f.write("🚨 WARNING: This password has been leaked! Change it immediately.\n")
+        else:
+            f.write("✅ Safe: This password has not been found in leaks.\n")
+    
+    print("\n📜 Report saved as password_report.txt")
 
 def analyze_password(password):
     """Analyze password strength and provide recommendations."""
@@ -58,35 +85,31 @@ def analyze_password(password):
     else:
         print("✅ Safe: This password has not been found in leaks.")
 
-if __name__ == "__main__":
-    user_password = input("Enter a password to analyze: ")
-    analyze_password(user_password)
-def save_report(password, length, entropy, pwned):
-    with open("password_report.txt", "w") as f:
-        f.write("🔍 Password Security Report 🔍\n")
-        f.write(f"🔹 Password Length: {length}\n")
-        f.write(f"🔹 Entropy: {entropy} bits\n")
+    # ✅ Fix: Ensure that the function receives 'password' as an argument
+    save_report(password, length, entropy, pwned)
 
-        if length < 8:
-            f.write("⚠️ Weak: Password should be at least 8 characters long!\n")
-        elif length < 12:
-            f.write("🟡 Moderate: Consider using 12+ characters.\n")
-        else:
-            f.write("✅ Strong: Good length!\n")
+def crack_password(hashfile, wordlist):
+    """Attempt to crack a password hash using John the Ripper."""
+    import subprocess
 
-        if entropy < 40:
-            f.write("⚠️ Low Entropy: Password is predictable.\n")
-        elif entropy < 60:
-            f.write("🟡 Medium Entropy: Could be improved.\n")
-        else:
-            f.write("✅ High Entropy: Strong password.\n")
+    # Define the default format as Raw-SHA256 (modify if needed)
+    hash_format = "Raw-SHA256"
 
-        if pwned:
-            f.write("🚨 WARNING: This password has been leaked! Change it immediately.\n")
-        else:
-            f.write("✅ Safe: This password has not been found in leaks.\n")
+    print(f"\n🔑 Attempting to crack hashes from {hashfile} using {wordlist}...\n")
     
-    print("\n📜 Report saved as password_report.txt")
+    # Run John with the correct format
+    cmd = ["john", f"--format={hash_format}", "--wordlist=" + wordlist, hashfile]
+    subprocess.run(cmd)
 
-# Call save_report in analyze_password function
-save_report(password, length, entropy, pwned)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Password Analyzer & Cracker")
+    parser.add_argument("--check", type=str, help="Path to hash file for cracking")
+    parser.add_argument("--wordlist", type=str, help="Path to wordlist for cracking")
+
+    args = parser.parse_args()
+
+    if args.check and args.wordlist:
+        crack_password(args.check, args.wordlist)
+    else:
+        user_password = input("Enter a password to analyze: ")
+        analyze_password(user_password)
